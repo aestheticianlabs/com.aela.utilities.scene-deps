@@ -1,0 +1,22 @@
+{
+  "name": "AeLa.Utilities.SceneDeps.Tests.PlayMode",
+  "rootNamespace": "AeLa.Utilities.SceneDeps.Tests.PlayMode",
+  "references": [
+	"UnityEngine.TestRunner",
+	"UnityEditor.TestRunner",
+	"AeLa.Utilities.SceneDeps.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+	"nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+	"UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

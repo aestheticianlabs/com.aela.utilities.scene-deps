@@ -1,0 +1,13 @@
+{
+	"name": "com.aela.utilities.scene-deps",
+	"version": "0.1.0-unreleased",
+	"displayName": "AeLa Scene Dependencies",
+	"description": "Enables additive scenes as dependencies for other scenes",
+	"unity": "6000.0",
+	"documentationUrl": "https://github.com/aestheticianlabs/com.aela.utilities.scene-deps",
+	"dependencies": {},
+	"author": {
+		"name": "Aesthetician Labs",
+		"url": "https://aesthetic.games/"
+	}
+}
