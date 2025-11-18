@@ -1,33 +1,208 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Threading;
 using AeLa.Utilities.Pool;
+using Cysharp.Threading.Tasks;
+using UnityEngine.AddressableAssets;
 using UnityEngine.Pool;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.SceneManagement;
 
 namespace AeLa.Utilities.SceneDeps
 {
 	public static class SceneDependencies
 	{
+		private static readonly Dictionary<string, SceneInstance> pathToInstance = new();
+		private static readonly HashSet<string> loadedDependencies = new();
+		private static readonly HashSet<string> currentDependencies = new();
+
 		/// <summary>
-		/// Loads all the additive dependencies for the provided scene.
+		/// Additively loads all the dependency scenes in the provided <see cref="GroupedDependencyChain"/>
+		/// in parallel, then activates them once all of their dependencies are loaded and activated.
 		/// </summary>
-		/// <param name="scenePath"></param>
-		public static async void LoadDependencies(string scenePath)
+		/// <param name="groups">The <see cref="GroupedDependencyChain"/> to load.</param>
+		public static async UniTask LoadDependenciesAsync(GroupedDependencyChain groups, CancellationToken ct = default)
 		{
-			throw new NotImplementedException();
+			currentDependencies.Clear();
+
+			// Below we load the groups as a pipeline, where all scenes are loaded simultaneously,
+			// but each group is only activated when the previous group is fully loaded and activated
+			//
+			// For example:
+			// Group 0:   Load -- Activate
+			// Group 1:   Load ------------ Activate
+			// Group 2:   Load ---------------------- Activate
+			// Group 3:   Load -------------------------------- Activate
+
+			using (ListPool<Exception>.Get(out var exceptions))
+			{
+				// start to parallel load the scenes
+				var loadTasks = new UniTask[groups.Count];
+				for (int i = 0; i < groups.Count; i++)
+				{
+					var scenes = groups.GetGroup(i);
+					var loadScenesTasks = new UniTask[scenes.Count];
+					for (int j = 0; j < scenes.Count; j++)
+					{
+						loadScenesTasks[j] = LoadDependencyScene(scenes[j], exceptions);
+					}
+
+					loadTasks[i] = UniTask.WhenAll(loadScenesTasks);
+				}
+
+				// create the pipeline
+				var pipeline = UniTask.CompletedTask;
+				for (int i = 0; i < groups.Count; i++)
+				{
+					pipeline = ActivateGroupAfterPrevious(groups.GetGroup(i), loadTasks[i], pipeline, exceptions);
+				}
+
+				await pipeline;
+
+				if (exceptions.Count > 0)
+				{
+					throw new AggregateException(exceptions);
+				}
+
+				await UnloadUnusedDependenciesAsync(ct);
+			}
+
+			ct.ThrowIfCancellationRequested();
+
+			return;
+
+			async UniTask ActivateGroupAfterPrevious(
+				IReadOnlyList<string> scenes,
+				UniTask loadTask, UniTask previousActivation,
+				List<Exception> exceptions
+			)
+			{
+				await UniTask.WhenAll(loadTask, previousActivation);
+
+				foreach (var scene in scenes)
+				{
+					// if a scene load failed, there will not be an instance for it
+					// but we still need to finish the load operation for all the
+					// other scenes so that the ResourceManager isn't locked up
+					if (!pathToInstance.TryGetValue(scene, out var instance)) continue;
+
+					try
+					{
+						// activation must happen regardless of cancellation, so we do not pass ct
+						// ReSharper disable once MethodSupportsCancellation
+						await instance.ActivateAsync().ToUniTask();
+					}
+					catch (Exception e)
+					{
+						// we need to make sure all scenes are activated or else we'll lock up ResourceManager
+						exceptions.Add(e);
+					}
+				}
+			}
+
+			async UniTask LoadDependencyScene(string scene, List<Exception> exceptions)
+			{
+				// already loaded
+				if (loadedDependencies.Contains(scene))
+				{
+					currentDependencies.Add(scene);
+					return;
+				}
+
+				SceneInstance sceneInstance;
+				try
+				{
+					if (pathToInstance.ContainsKey(scene))
+					{
+						throw new(
+							$"There is already a handle for {scene} but it is not in the {nameof(loadedDependencies)} set."
+						);
+					}
+
+					// try to load the scene
+					var op = Addressables.LoadSceneAsync(scene, LoadSceneMode.Additive, false);
+					sceneInstance = await op;
+
+					if (op.Status == AsyncOperationStatus.Failed)
+					{
+						Addressables.Release(op);
+						throw new($"Failed to load {scene}", op.OperationException);
+					}
+				}
+				catch (Exception e)
+				{
+					// keep track of exceptions but keep going b/c we need all loading scenes to be fully activated
+					// or else we'll lock up the ResourceManager
+					exceptions.Add(e);
+					return;
+				}
+
+				var path = sceneInstance.Scene.path;
+				loadedDependencies.Add(path);
+				currentDependencies.Add(path);
+				pathToInstance[path] = sceneInstance;
+			}
 		}
 
 		/// <summary>
-		/// Returns the fully-resolved <see cref="GroupedDependencyChain"/> for the provided scene.
+		/// Loads all the dependencies for the provided scene.
+		/// Dependencies are determined by calling <see cref="GetDependenciesAsync"/>.
 		/// </summary>
-		public static async Task<GroupedDependencyChain> GetDependencies(string scenePath) =>
-			GetDependencies(scenePath, await DependencyListProvider.GetDependencyLists());
+		/// <param name="scenePath">The path of the scene--this should be the same as the addressables key.</param>
+		public static async UniTask LoadDependenciesAsync(string scenePath, CancellationToken ct = default) =>
+			await LoadDependenciesAsync(await GetDependenciesAsync(scenePath), ct);
+
+		/// <summary>
+		/// Unloads all currently unused dependencies.
+		/// </summary>
+		/// <param name="ct"></param>
+		public static async UniTask UnloadUnusedDependenciesAsync(CancellationToken ct = default)
+		{
+			using var _ = HashSetPool<string>.Get(out var toUnload);
+			toUnload.UnionWith(loadedDependencies);
+			toUnload.ExceptWith(currentDependencies);
+
+			using var __ = ListPool<UniTask>.Get(out var tasks);
+			foreach (var scene in toUnload)
+			{
+				tasks.Add(UnloadDependencyAsync(pathToInstance[scene]));
+			}
+
+			await UniTask.WhenAll(tasks);
+		}
+
+		/// <summary>
+		/// Unloads all scene dependencies.
+		/// </summary>
+		public static async UniTask UnloadAllAsync()
+		{
+			using var _ = ListPool<UniTask>.Get(out var tasks);
+			using var __ = ListPool<string>.Get(out var deps);
+			deps.AddRange(loadedDependencies); // cache loadedDependencies b/c it will be modified by Unload
+			foreach (var scene in deps)
+			{
+				tasks.Add(UnloadDependencyAsync(pathToInstance[scene]));
+			}
+
+			await UniTask.WhenAll(tasks);
+			currentDependencies.Clear();
+		}
+
+		/// <summary>
+		/// Returns the fully-resolved <see cref="GroupedDependencyChain"/> for the provided scene
+		/// using <see cref="DependencyListsProvider.GetDependencyLists()"/>
+		/// </summary>
+		/// <param name="scenePath">The path of the scene--this should be the same as the addressables key.</param>
+		public static async UniTask<GroupedDependencyChain> GetDependenciesAsync(string scenePath) =>
+			GetDependencies(scenePath, await DependencyListsProvider.GetDependencyListsAsync());
 
 		/// <summary>
 		/// Returns the fully-resolved <see cref="GroupedDependencyChain"/> for the provided scene.
 		/// </summary>
+		/// <param name="scenePath">The path of the scene--this should be the same as the addressables key.</param>
 		public static GroupedDependencyChain GetDependencies(
-			string scenePath, IReadOnlyList<IDependencyList> dependencyLists
+			string scenePath, IList<ISceneDependencyProvider> dependencyLists
 		)
 		{
 			using var dependencyCache = new DependencyCache(dependencyLists);
@@ -35,10 +210,27 @@ namespace AeLa.Utilities.SceneDeps
 			using var _ = ListPool<string>.Get(out var depsTopo);
 			GetPostOrderDependencies(scenePath, dependencyCache, depsTopo);
 
+			// remove root scene from topo before building group
+			depsTopo.RemoveAt(depsTopo.Count - 1);
+
 			// group dependencies in post-order topo list by depth
 			return new(depsTopo, dependencyCache);
 		}
 
+		private static async UniTask UnloadDependencyAsync(SceneInstance instance)
+		{
+			loadedDependencies.Remove(instance.Scene.path);
+			pathToInstance.Remove(instance.Scene.path);
+			await Addressables.UnloadSceneAsync(instance);
+		}
+
+		/// <summary>
+		/// Enumerates the dependencies for the provided scene into a reverse topological order.
+		/// </summary>
+		/// <param name="scenePath">The path of the scene--this should be the same as the addressables key.</param>
+		/// <param name="dependencyCache">Used to evaluated dependencies. May be pre-filled if necessary.</param>
+		/// <param name="order">A list to fill with the reversed topological order</param>
+		/// <exception cref="CyclicDependenciesException">Thrown if any cycles are detected in the dependency graph</exception>
 		private static void GetPostOrderDependencies(
 			string scenePath, DependencyCache dependencyCache, List<string> order
 		)
@@ -75,77 +267,10 @@ namespace AeLa.Utilities.SceneDeps
 				{
 					// finalize node after all children have been visited
 					visited.Add(current.scenePath);
+					visiting.Remove(current.scenePath);
 					order.Add(current.scenePath);
 				}
 			}
-		}
-	}
-
-	internal struct DependencyCache : IDisposable
-	{
-		private Dictionary<string, List<string>> cache;
-		private IReadOnlyList<IDependencyList> dependencyLists;
-
-		public DependencyCache(IReadOnlyList<IDependencyList> dependencyLists)
-		{
-			this.dependencyLists = dependencyLists;
-			cache = DictionaryPool<string, List<string>>.Get();
-		}
-
-		public List<string> GetImmediateDependencies(string scenePath)
-		{
-			if (cache == null)
-			{
-				throw new ObjectDisposedException(nameof(DependencyCache));
-			}
-
-			if (!cache.TryGetValue(scenePath, out var dependencies))
-			{
-				dependencies = ListPool<string>.Get();
-				foreach (var list in dependencyLists)
-				{
-					list.GetDependencies(scenePath, dependencies);
-				}
-
-				cache[scenePath] = dependencies;
-			}
-
-			return dependencies;
-		}
-
-		public void Dispose()
-		{
-			if (cache == null)
-			{
-				throw new ObjectDisposedException(nameof(DependencyCache));
-			}
-
-			foreach (var list in cache.Values)
-			{
-				ListPool<string>.Release(list);
-			}
-
-			DictionaryPool<string, List<string>>.Release(cache);
-			cache = null;
-		}
-	}
-
-
-	/// <summary>
-	/// Thrown if a cycle is found while evaluating the scene dependency graph.
-	/// </summary>
-	public class CyclicDependenciesException : Exception
-	{
-		internal CyclicDependenciesException() : base("Cycle detected while evaluating dependency chain.")
-		{
-		}
-	}
-
-	public static class DependencyListProvider
-	{
-		public static async Task<IReadOnlyList<IDependencyList>> GetDependencyLists()
-		{
-			throw new NotImplementedException();
 		}
 	}
 }

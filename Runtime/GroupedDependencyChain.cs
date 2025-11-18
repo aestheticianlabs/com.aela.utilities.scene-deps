@@ -4,11 +4,21 @@ using UnityEngine.Pool;
 
 namespace AeLa.Utilities.SceneDeps
 {
+	/// <summary>
+	/// Organizes scene dependencies into load phase groups.
+	/// Each group is guaranteed to be safe to load
+	/// as long as any groups with a lower index have already been loaded.
+	/// </summary>
 	public struct GroupedDependencyChain : IDisposable
 	{
+		public static readonly GroupedDependencyChain Empty = default;
+
 		private Dictionary<int, List<string>> groups;
 
-		public int Count => groups.Count;
+		/// <summary>
+		/// Returns the number of groups in the chain.
+		/// </summary>
+		public int Count => groups?.Count ?? 0;
 
 		internal GroupedDependencyChain(List<string> depsTopo, DependencyCache dependencyCache)
 		{
@@ -44,6 +54,11 @@ namespace AeLa.Utilities.SceneDeps
 			}
 		}
 
+		/// <summary>
+		/// Returns a list of scene paths for the provided group index.
+		/// </summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
 		public IReadOnlyList<string> GetGroup(int index)
 		{
 			return groups[index];
@@ -51,6 +66,8 @@ namespace AeLa.Utilities.SceneDeps
 
 		public void Dispose()
 		{
+			if (groups == null) return;
+
 			foreach (var list in groups.Values)
 			{
 				ListPool<string>.Release(list);

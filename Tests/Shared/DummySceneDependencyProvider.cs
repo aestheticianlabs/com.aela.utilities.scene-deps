@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 
-namespace AeLa.Utilities.SceneDeps.Tests.EditMode
+namespace AeLa.Utilities.SceneDeps.Tests.Shared
 {
-	public class DummyDependencyList : IDependencyList
+	public class DummySceneDependencyProvider : ISceneDependencyProvider
 	{
 		public readonly string Match;
 		public readonly string[] Dependencies;
 
-		public DummyDependencyList(string match, params string[] dependencies)
+		public DummySceneDependencyProvider(string match, params string[] dependencies)
 		{
 			Match = match;
 			Dependencies = dependencies;

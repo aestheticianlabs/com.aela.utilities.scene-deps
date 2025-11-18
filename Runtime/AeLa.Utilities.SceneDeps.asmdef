@@ -1,16 +1,21 @@
 {
-  "name": "AeLa.Utilities.SceneDeps",
-  "rootNamespace": "AeLa.Utilities.SceneDeps",
-  "references": [
-	"GUID:330cc2e1a8807401982462d4bc2650fb"
-  ],
-  "includePlatforms": [],
-  "excludePlatforms": [],
-  "allowUnsafeCode": false,
-  "overrideReferences": false,
-  "precompiledReferences": [],
-  "autoReferenced": true,
-  "defineConstraints": [],
-  "versionDefines": [],
-  "noEngineReferences": false
+    "name": "AeLa.Utilities.SceneDeps",
+    "rootNamespace": "AeLa.Utilities.SceneDeps",
+    "references": [
+        "AeLa.Utilities",
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "UniTask",
+        "UniTask.Addressables",
+        "AeLa.Utilities.UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

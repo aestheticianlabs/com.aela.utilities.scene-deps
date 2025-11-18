@@ -1,24 +1,25 @@
 {
-  "name": "AeLa.Utilities.SceneDeps.Tests.EditMode",
-  "rootNamespace": "AeLa.Utilities.SceneDeps.Tests.EditMode",
-  "references": [
-	"UnityEngine.TestRunner",
-	"UnityEditor.TestRunner",
-	"AeLa.Utilities.SceneDeps"
-  ],
-  "includePlatforms": [
-	"Editor"
-  ],
-  "excludePlatforms": [],
-  "allowUnsafeCode": false,
-  "overrideReferences": true,
-  "precompiledReferences": [
-	"nunit.framework.dll"
-  ],
-  "autoReferenced": false,
-  "defineConstraints": [
-	"UNITY_INCLUDE_TESTS"
-  ],
-  "versionDefines": [],
-  "noEngineReferences": false
+    "name": "AeLa.Utilities.SceneDeps.Tests.EditMode",
+    "rootNamespace": "AeLa.Utilities.SceneDeps.Tests.EditMode",
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "AeLa.Utilities.SceneDeps",
+        "AeLa.Utilities.SceneDeps.Tests.Shared"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

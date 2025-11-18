@@ -1,0 +1,19 @@
+{
+    "name": "AeLa.Utilities.SceneDeps.Tests.Shared",
+    "rootNamespace": "AeLa.Utilities.SceneDeps.Tests.Shared",
+    "references": [
+        "AeLa.Utilities.SceneDeps",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -4,9 +4,16 @@ using UnityEngine;
 
 namespace AeLa.Utilities.SceneDeps
 {
+	/// <summary>
+	/// Assigns dependencies for scenes matching a regex pattern.
+	/// </summary>
 	[CreateAssetMenu(menuName = "Scene Dependencies/Scene Dependency List")]
-	public class SceneDependencyList : ScriptableDependencyList
+	public class SceneDependencyList : ScriptableSceneDependencyProvider
 	{
+		/// <summary>
+		/// Dependencies from this list will be added first, if any
+		/// </summary>
+		[Tooltip("Dependencies from this list will be added first, if any")]
 		public SceneDependencyList[] InheritDependencies;
 
 		/// <summary>
@@ -18,17 +25,35 @@ namespace AeLa.Utilities.SceneDeps
 		/// <summary>
 		/// The dependency scenes to load before matched scenes.
 		/// </summary>
-		public SceneReference[] Dependencies;
+		public SceneField[] Dependencies;
 
 		public override void GetDependencies(string scenePath, List<string> dependencies)
 		{
-			if (!Regex.IsMatch(MatchScenes, scenePath)) return;
+			if (!CheckMatchesScene(scenePath)) return;
+
+			AddInheritedDependencies(scenePath, dependencies);
+			AddDependencies(scenePath, dependencies);
+		}
+
+		protected virtual bool CheckMatchesScene(string scenePath)
+		{
+			return Regex.IsMatch(scenePath, MatchScenes);
+		}
+
+		protected virtual void AddInheritedDependencies(string scenePath, List<string> dependencies)
+		{
+			if (InheritDependencies == null) return;
 
 			// add inherited dependencies first
 			foreach (var list in InheritDependencies)
 			{
 				list.GetDependencies(scenePath, dependencies);
 			}
+		}
+
+		protected virtual void AddDependencies(string scenePath, List<string> dependencies)
+		{
+			if (Dependencies == null) return;
 
 			// add our dependencies
 			foreach (var scene in Dependencies)

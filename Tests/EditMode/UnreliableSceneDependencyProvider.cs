@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace AeLa.Utilities.SceneDeps.Tests.EditMode
 {
-	public class UnreliableDependencyList : IDependencyList
+	public class UnreliableSceneDependencyProvider : ISceneDependencyProvider
 	{
 		public readonly string Match;
 		public readonly string[] FirstCallDependencies;
@@ -11,7 +11,7 @@ namespace AeLa.Utilities.SceneDeps.Tests.EditMode
 
 		private bool called;
 
-		public UnreliableDependencyList(string match, params string[] firstCallDependencies)
+		public UnreliableSceneDependencyProvider(string match, params string[] firstCallDependencies)
 		{
 			Match = match;
 			FirstCallDependencies = firstCallDependencies;
