@@ -1,12 +1,14 @@
 {
-  "name": "AeLa.Utilities.SceneDeps.Tests.PlayMode",
-  "rootNamespace": "AeLa.Utilities.SceneDeps.Tests.PlayMode",
+  "name": "AeLa.Utilities.SceneDeps.Tests.EditMode",
+  "rootNamespace": "AeLa.Utilities.SceneDeps.Tests.EditMode",
   "references": [
 	"UnityEngine.TestRunner",
 	"UnityEditor.TestRunner",
 	"AeLa.Utilities.SceneDeps"
   ],
-  "includePlatforms": [],
+  "includePlatforms": [
+	"Editor"
+  ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": true,
