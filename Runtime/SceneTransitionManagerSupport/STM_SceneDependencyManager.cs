@@ -6,6 +6,10 @@ using UnityEngine;
 
 namespace AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport
 {
+	/// <summary>
+	/// Add this to your initialization scene to add automagic
+	/// scene dependency load/unload to AeLa Scene Transition Manager.
+	/// </summary>
 	[PublicAPI]
 	// ReSharper disable once InconsistentNaming
 	public class STM_SceneDependencyManager : MonoBehaviour
