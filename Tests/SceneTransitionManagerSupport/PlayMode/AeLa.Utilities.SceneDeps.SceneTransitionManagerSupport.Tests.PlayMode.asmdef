@@ -1,0 +1,37 @@
+{
+    "name": "AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport.Tests.PlayMode",
+    "rootNamespace": "AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport.Tests.PlayMode",
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "AeLa.Utilities.SceneDeps",
+        "AeLa.Utilities.SceneDeps.Tests.Shared",
+        "AeLa.Utilities",
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "UniTask",
+        "AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport",
+        "AeLa.Utilities.SceneDeps.Tests.PlayMode",
+        "AeLa.Utilities.SceneTransition"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "AELA_STM"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.aela.utilities.scene-transition",
+            "expression": "",
+            "define": "AELA_STM"
+        }
+    ],
+    "noEngineReferences": false
+}

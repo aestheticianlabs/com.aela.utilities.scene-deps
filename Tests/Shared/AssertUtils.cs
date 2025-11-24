@@ -1,6 +1,7 @@
 using System;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
+using UnityEngine.SceneManagement;
 
 namespace AeLa.Utilities.SceneDeps.Tests.Shared
 {
@@ -19,6 +20,12 @@ namespace AeLa.Utilities.SceneDeps.Tests.Shared
 			}
 
 			Assert.IsTrue(caught, $"Did not catch {typeof(TException)}");
+		}
+
+		public static void IsLoaded(string scenePath)
+		{
+			var scene = SceneManager.GetSceneByPath(scenePath);
+			Assert.IsTrue(scene.IsValid() && scene.isLoaded, $"{scenePath} not loaded");
 		}
 	}
 }

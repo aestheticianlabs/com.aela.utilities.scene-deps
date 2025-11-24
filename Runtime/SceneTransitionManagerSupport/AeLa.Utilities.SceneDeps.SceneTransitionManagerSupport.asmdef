@@ -1,0 +1,27 @@
+{
+    "name": "AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport",
+    "rootNamespace": "AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport",
+    "references": [
+        "AeLa.Utilities",
+        "AeLa.Utilities.SceneDeps",
+        "AeLa.Utilities.SceneTransition",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "AELA_STM"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.aela.utilities.scene-transition",
+            "expression": "",
+            "define": "AELA_STM"
+        }
+    ],
+    "noEngineReferences": false
+}

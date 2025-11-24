@@ -10,6 +10,7 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using static AeLa.Utilities.SceneDeps.Tests.Shared.TestUtils;
 
 namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 {
@@ -163,12 +164,6 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 				Assert.IsTrue(bFlag, "Scene B was unloaded");
 				Assert.IsTrue(dFlag, "Scene D was unloaded");
 			}
-
-			GameObject AddSceneFlagObject(string sceneName)
-			{
-				SceneManager.SetActiveScene(SceneManager.GetSceneByName(sceneName));
-				return new($"{sceneName} Flag");
-			}
 		}
 
 		[UnityTest]
@@ -243,12 +238,6 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 
 				Assert.IsTrue(bFlag, "Scene B was unloaded");
 				Assert.IsTrue(dFlag, "Scene D was unloaded");
-			}
-
-			GameObject AddSceneFlagObject(string sceneName)
-			{
-				SceneManager.SetActiveScene(SceneManager.GetSceneByName(sceneName));
-				return new($"{sceneName} Flag");
 			}
 		}
 
@@ -357,7 +346,5 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 				await Addressables.UnloadSceneAsync(loadedMainScene);
 			}
 		}
-
-		private string AsPath(string name) => $"Assets/SceneDepsTests/Scenes/{name}.unity";
 	}
 }
