@@ -60,6 +60,13 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 				await SceneDependencies.LoadDependenciesAsync(groups);
 				await LoadMainScene("A");
 
+				AssertUtils.IsLoaded(AsPath("A"));
+				AssertUtils.IsLoaded(AsPath("B"));
+				AssertUtils.IsLoaded(AsPath("C"));
+				AssertUtils.IsLoaded(AsPath("D"));
+				AssertUtils.IsLoaded(AsPath("E"));
+				AssertUtils.IsLoaded(AsPath("F"));
+
 				// scene count includes test run scene
 				Assert.AreEqual(7, SceneManager.loadedSceneCount);
 			}
@@ -93,7 +100,14 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 				await SceneDependencies.LoadDependenciesAsync(groups);
 				await LoadMainScene("A");
 
-				// scene count includes test runn scene
+				AssertUtils.IsLoaded(AsPath("A"));
+				AssertUtils.IsLoaded(AsPath("B"));
+				AssertUtils.IsLoaded(AsPath("C"));
+				AssertUtils.IsLoaded(AsPath("D"));
+				AssertUtils.IsLoaded(AsPath("E"));
+				AssertUtils.IsLoaded(AsPath("F"));
+
+				// scene count includes test run scene
 				Assert.AreEqual(7, SceneManager.loadedSceneCount);
 
 				await UnloadMainScene();
@@ -146,6 +160,13 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 				);
 				await LoadMainScene("A");
 
+				AssertUtils.IsLoaded(AsPath("A"));
+				AssertUtils.IsLoaded(AsPath("B"));
+				AssertUtils.IsLoaded(AsPath("C"));
+				AssertUtils.IsLoaded(AsPath("D"));
+				AssertUtils.IsLoaded(AsPath("E"));
+				AssertUtils.IsLoaded(AsPath("F"));
+
 				// scene count includes test run scene
 				Assert.AreEqual(7, SceneManager.loadedSceneCount);
 
@@ -160,6 +181,11 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 				);
 
 				Assert.AreEqual(5, SceneManager.loadedSceneCount, "Not all dependencies were loaded");
+
+				AssertUtils.IsLoaded(AsPath("B"));
+				AssertUtils.IsLoaded(AsPath("D"));
+				AssertUtils.IsLoaded(AsPath("g"));
+				AssertUtils.IsLoaded(AsPath("H"));
 
 				Assert.IsTrue(bFlag, "Scene B was unloaded");
 				Assert.IsTrue(dFlag, "Scene D was unloaded");
@@ -205,6 +231,13 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 					SceneDependencies.GetDependencies(AsPath("A"), depList1)
 				);
 				await LoadMainScene("A");
+
+				AssertUtils.IsLoaded(AsPath("A"));
+				AssertUtils.IsLoaded(AsPath("B"));
+				AssertUtils.IsLoaded(AsPath("C"));
+				AssertUtils.IsLoaded(AsPath("D"));
+				AssertUtils.IsLoaded(AsPath("E"));
+				AssertUtils.IsLoaded(AsPath("F"));
 
 				// scene count includes test run scene
 				Assert.AreEqual(7, SceneManager.loadedSceneCount);
@@ -256,6 +289,13 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 				// weird behavior: if we LoadMainScene before LoadDependencies, LoadDependencies gets stuck waiting for the main scene to load. There's a hint as to why here: https://discussions.unity.com/t/addressables-assetloading-is-blocked-by-async-scene-loading/741632/5
 				await SceneDependencies.LoadDependenciesAsync(AsPath("A"));
 				await LoadMainScene("A");
+
+				AssertUtils.IsLoaded(AsPath("A"));
+				AssertUtils.IsLoaded(AsPath("B"));
+				AssertUtils.IsLoaded(AsPath("C"));
+				AssertUtils.IsLoaded(AsPath("D"));
+				AssertUtils.IsLoaded(AsPath("E"));
+				AssertUtils.IsLoaded(AsPath("F"));
 
 				// scene count includes test run scene
 				Assert.AreEqual(7, SceneManager.loadedSceneCount);
