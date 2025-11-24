@@ -172,6 +172,87 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 		}
 
 		[UnityTest]
+		public IEnumerator LoadDependentScenes_DontUnloadUnusedDependencies()
+		{
+			///       A
+			///     /   \
+			///   B(1)  C(2)
+			///   /       \
+			/// D(0)     E(1)
+			///             \
+			///            F(0)
+			var depList1 = new List<ISceneDependencyProvider>
+			{
+				new DummySceneDependencyProvider(AsPath("A"), AsPath("B"), AsPath("C")),
+				new DummySceneDependencyProvider(AsPath("B"), AsPath("D")),
+				new DummySceneDependencyProvider(AsPath("C"), AsPath("E")),
+				new DummySceneDependencyProvider(AsPath("E"), AsPath("F"))
+			};
+
+			///      A 1
+			///     /   \
+			///   B(1)  G(1)
+			///   /		  \
+			/// D(0)     H(0)
+			var depList2 = new List<ISceneDependencyProvider>
+			{
+				new DummySceneDependencyProvider(AsPath("A 1"), AsPath("B"), AsPath("G")),
+				new DummySceneDependencyProvider(AsPath("B"), AsPath("D")),
+				new DummySceneDependencyProvider(AsPath("G"), AsPath("H"))
+			};
+
+			return Test().ToCoroutine();
+
+			async UniTask Test()
+			{
+				// weird behavior: if we LoadMainScene before LoadDependencies, LoadDependencies gets stuck waiting for the main scene to load. There's a hint as to why here: https://discussions.unity.com/t/addressables-assetloading-is-blocked-by-async-scene-loading/741632/5
+				await SceneDependencies.LoadDependenciesAsync(
+					SceneDependencies.GetDependencies(AsPath("A"), depList1)
+				);
+				await LoadMainScene("A");
+
+				// scene count includes test run scene
+				Assert.AreEqual(7, SceneManager.loadedSceneCount);
+
+				await UnloadMainScene();
+
+				// create flag objects in scenes to make sure they remain loaded
+				var bFlag = AddSceneFlagObject("B");
+				var cFlag = AddSceneFlagObject("C");
+				var dFlag = AddSceneFlagObject("D");
+				var eFlag = AddSceneFlagObject("E");
+				var fFlag = AddSceneFlagObject("F");
+
+				await SceneDependencies.LoadDependenciesAsync(
+					SceneDependencies.GetDependencies(AsPath("A 1"), depList2),
+					unloadUnusedDependencies: false
+				);
+
+				Assert.IsTrue(bFlag, "Scene B was unloaded");
+				Assert.IsTrue(cFlag, "Scene C was unloaded");
+				Assert.IsTrue(dFlag, "Scene D was unloaded");
+				Assert.IsTrue(eFlag, "Scene E was unloaded");
+				Assert.IsTrue(fFlag, "Scene F was unloaded");
+
+				Assert.AreEqual(8, SceneManager.loadedSceneCount, "Incorrect dependency scene count");
+
+				// make sure UnloadUnused call later works
+				await SceneDependencies.UnloadUnusedDependenciesAsync();
+
+				Assert.AreEqual(5, SceneManager.loadedSceneCount, "Not all dependencies were loaded");
+
+				Assert.IsTrue(bFlag, "Scene B was unloaded");
+				Assert.IsTrue(dFlag, "Scene D was unloaded");
+			}
+
+			GameObject AddSceneFlagObject(string sceneName)
+			{
+				SceneManager.SetActiveScene(SceneManager.GetSceneByName(sceneName));
+				return new($"{sceneName} Flag");
+			}
+		}
+
+		[UnityTest]
 		public IEnumerator LoadDependentScenes_FromProviderAssets() => UniTask.ToCoroutine(async () =>
 			{
 				/// Dependencies should be configured like this in the editor
@@ -217,7 +298,7 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 			UniTask Test()
 			{
 				var cts = new CancellationTokenSource();
-				var task = SceneDependencies.LoadDependenciesAsync(groups, cts.Token);
+				var task = SceneDependencies.LoadDependenciesAsync(groups, ct: cts.Token);
 				cts.Cancel();
 				return task;
 			}
@@ -248,7 +329,7 @@ namespace AeLa.Utilities.SceneDeps.Tests.PlayMode
 			async UniTask Test()
 			{
 				var cts = new CancellationTokenSource();
-				var task = SceneDependencies.LoadDependenciesAsync(groups, cts.Token);
+				var task = SceneDependencies.LoadDependenciesAsync(groups, ct: cts.Token);
 				cts.Cancel();
 
 				await task.ThrowsException<OperationCanceledException>();

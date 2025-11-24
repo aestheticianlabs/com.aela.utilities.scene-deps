@@ -22,7 +22,12 @@ namespace AeLa.Utilities.SceneDeps
 		/// in parallel, then activates them once all of their dependencies are loaded and activated.
 		/// </summary>
 		/// <param name="groups">The <see cref="GroupedDependencyChain"/> to load.</param>
-		public static async UniTask LoadDependenciesAsync(GroupedDependencyChain groups, CancellationToken ct = default)
+		/// <param name="unloadUnusedDependencies">Whether to unload already loaded dependency scenes that are no longer in use after loading the current groups. If false, you will need to call <see cref="UnloadUnusedDependenciesAsync"/> manually.</param>
+		public static async UniTask LoadDependenciesAsync(
+			GroupedDependencyChain groups,
+			bool unloadUnusedDependencies = true,
+			CancellationToken ct = default
+		)
 		{
 			currentDependencies.Clear();
 
@@ -65,7 +70,10 @@ namespace AeLa.Utilities.SceneDeps
 					throw new AggregateException(exceptions);
 				}
 
-				await UnloadUnusedDependenciesAsync(ct);
+				if (unloadUnusedDependencies)
+				{
+					await UnloadUnusedDependenciesAsync(ct);
+				}
 			}
 
 			ct.ThrowIfCancellationRequested();
@@ -150,8 +158,12 @@ namespace AeLa.Utilities.SceneDeps
 		/// Dependencies are determined by calling <see cref="GetDependenciesAsync"/>.
 		/// </summary>
 		/// <param name="scenePath">The path of the scene--this should be the same as the addressables key.</param>
-		public static async UniTask LoadDependenciesAsync(string scenePath, CancellationToken ct = default) =>
-			await LoadDependenciesAsync(await GetDependenciesAsync(scenePath), ct);
+		/// <param name="unloadUnusedDependencies">Whether to unload already loaded dependency scenes that are no longer in use after loading the current groups. If false, you will need to call <see cref="UnloadUnusedDependenciesAsync"/> manually.</param>
+		public static async UniTask LoadDependenciesAsync(
+			string scenePath,
+			bool unloadUnusedDependencies = true,
+			CancellationToken ct = default
+		) => await LoadDependenciesAsync(await GetDependenciesAsync(scenePath), unloadUnusedDependencies, ct);
 
 		/// <summary>
 		/// Unloads all currently unused dependencies.
