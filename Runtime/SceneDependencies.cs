@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using AeLa.Utilities.Pool;
 using Cysharp.Threading.Tasks;
+using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Pool;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -13,9 +14,17 @@ namespace AeLa.Utilities.SceneDeps
 {
 	public static class SceneDependencies
 	{
-		private static readonly Dictionary<string, SceneInstance> pathToInstance = new();
-		private static readonly HashSet<string> loadedDependencies = new();
-		private static readonly HashSet<string> currentDependencies = new();
+		private static Dictionary<string, SceneInstance> pathToInstance = new();
+		private static HashSet<string> loadedDependencies = new();
+		private static HashSet<string> currentDependencies = new();
+
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+		private static void ResetStatic()
+		{
+			pathToInstance = new();
+			loadedDependencies = new();
+			currentDependencies = new();
+		}
 
 		/// <summary>
 		/// Additively loads all the dependency scenes in the provided <see cref="GroupedDependencyChain"/>

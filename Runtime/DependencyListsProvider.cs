@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 
@@ -13,6 +15,12 @@ namespace AeLa.Utilities.SceneDeps
 	{
 		public const string DependencyListLabel = "SceneDependencyList";
 		private static AsyncOperationHandle<IList<ISceneDependencyProvider>> assetsHandle;
+
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+		private static void ResetStatic()
+		{
+			assetsHandle = default;
+		}
 
 		/// <summary>
 		/// Loads all <see cref="ISceneDependencyProvider"/> assets marked as Addressable
