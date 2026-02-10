@@ -40,19 +40,10 @@ namespace AeLa.Utilities.SceneDeps
 		{
 			currentDependencies.Clear();
 
-			// Below we load the groups as a pipeline, where all scenes are loaded simultaneously,
-			// but each group is only activated when the previous group is fully loaded and activated
-			//
-			// For example:
-			// Group 0:   Load -- Activate
-			// Group 1:   Load ------------ Activate
-			// Group 2:   Load ---------------------- Activate
-			// Group 3:   Load -------------------------------- Activate
-
+			// Below we load and activate the groups in order.
+			// Scenes within a group are loaded/activated simultaneously.
 			using (ListPool<Exception>.Get(out var exceptions))
 			{
-				// start to parallel load the scenes
-				var loadTasks = new UniTask[groups.Count];
 				for (int i = 0; i < groups.Count; i++)
 				{
 					var scenes = groups.GetGroup(i);
@@ -62,17 +53,8 @@ namespace AeLa.Utilities.SceneDeps
 						loadScenesTasks[j] = LoadDependencyScene(scenes[j], exceptions);
 					}
 
-					loadTasks[i] = UniTask.WhenAll(loadScenesTasks);
+					await UniTask.WhenAll(loadScenesTasks);
 				}
-
-				// create the pipeline
-				var pipeline = UniTask.CompletedTask;
-				for (int i = 0; i < groups.Count; i++)
-				{
-					pipeline = ActivateGroupAfterPrevious(groups.GetGroup(i), loadTasks[i], pipeline, exceptions);
-				}
-
-				await pipeline;
 
 				if (exceptions.Count > 0)
 				{
@@ -88,35 +70,6 @@ namespace AeLa.Utilities.SceneDeps
 			ct.ThrowIfCancellationRequested();
 
 			return;
-
-			async UniTask ActivateGroupAfterPrevious(
-				IReadOnlyList<string> scenes,
-				UniTask loadTask, UniTask previousActivation,
-				List<Exception> exceptions
-			)
-			{
-				await UniTask.WhenAll(loadTask, previousActivation);
-
-				foreach (var scene in scenes)
-				{
-					// if a scene load failed, there will not be an instance for it
-					// but we still need to finish the load operation for all the
-					// other scenes so that the ResourceManager isn't locked up
-					if (!pathToInstance.TryGetValue(scene, out var instance)) continue;
-
-					try
-					{
-						// activation must happen regardless of cancellation, so we do not pass ct
-						// ReSharper disable once MethodSupportsCancellation
-						await instance.ActivateAsync().ToUniTask();
-					}
-					catch (Exception e)
-					{
-						// we need to make sure all scenes are activated or else we'll lock up ResourceManager
-						exceptions.Add(e);
-					}
-				}
-			}
 
 			async UniTask LoadDependencyScene(string scene, List<Exception> exceptions)
 			{
@@ -137,8 +90,8 @@ namespace AeLa.Utilities.SceneDeps
 						);
 					}
 
-					// try to load the scene
-					var op = Addressables.LoadSceneAsync(scene, LoadSceneMode.Additive, false);
+					// try to load & activate the scene
+					var op = Addressables.LoadSceneAsync(scene, LoadSceneMode.Additive);
 					sceneInstance = await op;
 
 					if (op.Status == AsyncOperationStatus.Failed)
