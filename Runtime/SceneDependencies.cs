@@ -79,6 +79,8 @@ namespace AeLa.Utilities.SceneDeps
 		/// </summary>
 		private static Dictionary<string, int> loadedDependencies = new();
 
+		private static Dictionary<string, AsyncOperationHandle<SceneInstance>> loadingScenes = new();
+
 		private static Queue<Handle> releaseQueue = new();
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -143,6 +145,13 @@ namespace AeLa.Utilities.SceneDeps
 					return;
 				}
 
+				// wait for existing load operation if any
+				if (loadingScenes.TryGetValue(scene, out var existingOperation))
+				{
+					await existingOperation;
+					return;
+				}
+
 				SceneInstance sceneInstance;
 				try
 				{
@@ -155,7 +164,9 @@ namespace AeLa.Utilities.SceneDeps
 
 					// try to load & activate the scene
 					var op = Addressables.LoadSceneAsync(scene, LoadSceneMode.Additive);
+					loadingScenes.Add(scene, op);
 					sceneInstance = await op;
+					loadingScenes.Remove(scene);
 
 					if (op.Status == AsyncOperationStatus.Failed)
 					{
