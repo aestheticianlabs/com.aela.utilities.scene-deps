@@ -1,6 +1,6 @@
 {
   "name": "com.aela.utilities.scene-deps",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "displayName": "AeLa Scene Dependencies",
   "description": "Enables additive scenes as dependencies for other scenes",
   "unity": "6000.0",

@@ -1,4 +1,3 @@
-using System;
 using AeLa.Utilities.SceneTransition;
 using Cysharp.Threading.Tasks;
 using JetBrains.Annotations;
@@ -14,14 +13,8 @@ namespace AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport
 	// ReSharper disable once InconsistentNaming
 	public class STM_SceneDependencyManager : MonoBehaviour
 	{
-		/// <summary>
-		/// Whether the previous scene's dependencies should be unloaded if they're not in the next scene's dependency list.
-		/// Disabling can be useful for intermediary transitions.
-		/// </summary>
-		public static bool UnloadUnusedDependencies = true;
-
-		public static DisableUnloadUnusedScope DisableUnloadUnusedScoped() =>
-			DisableUnloadUnusedScope.Create();
+		private SceneDependencies.Handle currentHandle;
+		private SceneDependencies.Handle previousHandle;
 
 		protected virtual void Awake()
 		{
@@ -39,6 +32,10 @@ namespace AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport
 
 		private void OnDestroy()
 		{
+			// unlaod any dependencies we may still have loaded
+			currentHandle?.Dispose();
+			previousHandle?.Dispose();
+
 			SceneTransitionManager.OnBeforeLoad -= OnBeforeLoad;
 			SceneTransitionManager.OnAfterUnload -= OnAfterUnload;
 		}
@@ -50,7 +47,7 @@ namespace AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport
 
 		protected virtual void OnAfterUnload(string scene)
 		{
-			UnloadPreviousDeps(scene).Forget();
+			UnloadPreviousDeps().Forget();
 		}
 
 		protected virtual async UniTask LoadDependencies(string scene)
@@ -58,32 +55,27 @@ namespace AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport
 			// start a blocking operation to wait for our dependencies to be loaded
 			using (SceneTransitionManager.Instance.BlockingOperations.StartOperation())
 			{
-				await SceneDependencies.LoadDependenciesAsync(scene, unloadUnusedDependencies: false);
+				if (previousHandle is { IsValid: true })
+				{
+					Debug.LogError("A previous scene's dependencies were still loaded. Unloading those first.");
+					await previousHandle.ReleaseAsync();
+					previousHandle = null;
+				}
+
+				previousHandle = currentHandle;
+				currentHandle = await SceneDependencies.LoadDependenciesAsync(scene);
 			}
 		}
 
-		protected virtual async UniTask UnloadPreviousDeps(string scene)
+		protected virtual async UniTask UnloadPreviousDeps()
 		{
-			if (!UnloadUnusedDependencies) return;
+			if (previousHandle is not { IsValid: true }) return;
 
 			// start a blocking operation to wait for old dependencies to be unloaded
 			using (SceneTransitionManager.Instance.BlockingOperations.StartOperation())
 			{
-				await SceneDependencies.UnloadUnusedDependenciesAsync();
-			}
-		}
-
-		public struct DisableUnloadUnusedScope : IDisposable
-		{
-			public static DisableUnloadUnusedScope Create()
-			{
-				UnloadUnusedDependencies = false;
-				return new();
-			}
-
-			public void Dispose()
-			{
-				UnloadUnusedDependencies = true;
+				await previousHandle.ReleaseAsync();
+				previousHandle = null;
 			}
 		}
 	}

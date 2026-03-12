@@ -38,11 +38,21 @@ namespace AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport.Tests.PlayMode
 		);
 
 		[UnityTearDown]
-		public IEnumerator TearDown()
-		{
-			Object.Destroy(managersGameObject);
-			return SceneDependencies.UnloadAllAsync().ToCoroutine();
-		}
+		public IEnumerator TearDown() => UniTask.ToCoroutine(async () =>
+			{
+				Object.Destroy(managersGameObject);
+
+				// wait for processing after STM_SceneDependencyManager destroy
+				await UniTask.Yield();
+				await SceneDependencies.WaitForReleaseQueueAsync();
+
+				for (var i = 1; i < SceneManager.sceneCount; i++)
+				{
+					var scene = SceneManager.GetSceneAt(i);
+					Debug.LogError($"Scene {scene.name} was not unloaded");
+				}
+			}
+		);
 
 		[UnityTest]
 		public IEnumerator SceneTransition_LoadsDependentScenes()
@@ -122,63 +132,6 @@ namespace AeLa.Utilities.SceneDeps.SceneTransitionManagerSupport.Tests.PlayMode
 			Assert.IsTrue(dFlag, "Scene D was unloaded");
 
 			Assert.AreEqual(5, SceneManager.loadedSceneCount);
-		}
-
-		[UnityTest]
-		public IEnumerator SceneTransition_LoadsDependentScenes_DontUnloadUnusedDependencies()
-		{
-			/// Dependencies should be configured like this in the editor
-			///       A
-			///     /   \
-			///   B(1)  C(2)
-			///   /       \
-			/// D(0)     E(1)
-			///             \
-			///            F(0)
-			///
-			///      A 1
-			///     /   \
-			///   B(1)  G(1)
-			///   /		  \
-			/// D(0)     H(0)
-
-			// load A
-			SceneTransitionManager.Instance.ChangeScene(AsPath("A"));
-
-			yield return new WaitWhile(() => SceneTransitionManager.Instance.IsLoading);
-
-			AssertUtils.IsLoaded(AsPath("A"));
-			AssertUtils.IsLoaded(AsPath("B"));
-			AssertUtils.IsLoaded(AsPath("C"));
-			AssertUtils.IsLoaded(AsPath("D"));
-			AssertUtils.IsLoaded(AsPath("E"));
-			AssertUtils.IsLoaded(AsPath("F"));
-
-			Assert.AreEqual(6, SceneManager.loadedSceneCount);
-
-			// create flag objects in scenes to make sure they remain loaded
-			var bFlag = AddSceneFlagObject("B");
-			var cFlag = AddSceneFlagObject("C");
-			var dFlag = AddSceneFlagObject("D");
-			var eFlag = AddSceneFlagObject("E");
-			var fFlag = AddSceneFlagObject("F");
-
-			// load A 1
-			using (STM_SceneDependencyManager.DisableUnloadUnusedScoped())
-			{
-				SceneTransitionManager.Instance.ChangeScene(AsPath("A 1"));
-				yield return new WaitWhile(() => SceneTransitionManager.Instance.IsLoading);
-			}
-
-			AssertUtils.IsLoaded(AsPath("A 1"));
-
-			Assert.IsTrue(bFlag, "Scene B was unloaded");
-			Assert.IsTrue(cFlag, "Scene C was unloaded");
-			Assert.IsTrue(dFlag, "Scene D was unloaded");
-			Assert.IsTrue(eFlag, "Scene E was unloaded");
-			Assert.IsTrue(fFlag, "Scene F was unloaded");
-
-			Assert.AreEqual(8, SceneManager.loadedSceneCount, "Incorrect dependency scene count");
 		}
 	}
 }

@@ -6,13 +6,23 @@ When loading a scene, it is often useful to know that certain systems/resources 
 
 ## How it works
 
-1. Define dependencies in **SceneDependencyList**s and/or custom scripted dependency lists
-2. Before a scene is activated call `SceneDependencies.LoadDependencies(String scene)` to load necessary dependencies and unload unused dependencies
-3. Once the dependencies are finished loading, activate the dependent scene
-4. That's it! If you do this whenever you load any scenes, the dependent scenes will always be loaded/unloaded for you.
+1. Define dependencies in **SceneDependencyList**s and/or custom scripted dependency lists.
+2. Before a scene is activated call `SceneDependencies.LoadDependencies(String scene)` to load necessary dependencies. Be sure to capture the returned handle.
+3. Once the dependencies are finished loading, activate the dependent scene.
+4. Later, release the handle to unload the dependencies.
 
 > [!NOTE]
-> If you're using [AeLa Scene Transition Utility](https://github.com/aestheticianlabs/com.aela.utilities.scene-transition) just add the `STM_SceneDependencyManager` component to your initialization scene to handle steps 2-3!
+> If you're using [AeLa Scene Transition Utility](https://github.com/aestheticianlabs/com.aela.utilities.scene-transition) just add the `STM_SceneDependencyManager` component to your initialization scene to handle steps 2-4!
+
+### `SceneDependencies.Handle`
+
+A `Handle` object is returned whenever you call `SceneDependencies.LoadDependenciesAsync()`. This handle is part of how the dependencies system keeps track of which dependencies should be loaded/unloaded at any given time.
+
+Interally, the system keeps track of the number of handles referencing each scene. If a handle is released, it decrements the reference count for its scenes. If a scene's reference count reaches zero while a handle is being released, it will be unloaded as part of that handle's release operation.
+
+In short, be sure to keep track of your handles for dependants and call `Release()` or `ReleaseAsync()` when a dependant no longer needs its dependencies.
+
+
 ## Addressables configuration
 
 ### Scene Dependency Providers
@@ -29,13 +39,6 @@ Here's the recommended configuration:
 ### Dependency Scenes
 
 Dependency scenes are loaded by path using the Addressables system. How you group your assets is up to your project's needs, but **the dependency scene assets must be keyed by asset path**.
-
-## Preserving dependencies
-
-By default, dependency scenes remain loaded between transitions if they are still needed by the next scene, reducing churn. You can disable this behavior by setting `unloadUnusedDependencies` to `false` when calling `LoadDependenciesAsync`
-
-> [!NOTE]
-> If you're using `STM_SceneDependencyManager`, set `STM_SceneDependencyManager.UnloadUnusedDependencies` to `false` before calling `SceneTransitionManager.ChangeScene`. You can also wrap your code in `using(STM_SceneDependencyManager.DisableUnloadUnusedScope())` to ensure that `UnloadUnusedDependencies` is reset to `true`.
 
 ## Calculating dependency hierarchy
 
