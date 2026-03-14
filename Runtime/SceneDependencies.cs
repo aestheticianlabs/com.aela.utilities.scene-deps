@@ -72,6 +72,14 @@ namespace AeLa.Utilities.SceneDeps
 			}
 		}
 
+		public struct BlockingOperation : IDisposable
+		{
+			public void Dispose()
+			{
+				blockingOperations--;
+			}
+		}
+
 		private static Dictionary<string, SceneInstance> pathToInstance = new();
 
 		/// <summary>
@@ -83,12 +91,15 @@ namespace AeLa.Utilities.SceneDeps
 
 		private static Queue<Handle> releaseQueue = new();
 
+		private static uint blockingOperations;
+
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 		private static void ResetStatic()
 		{
 			pathToInstance = new();
 			loadedDependencies = new();
 			releaseQueue = new();
+			blockingOperations = 0;
 		}
 
 		/// <summary>
@@ -117,6 +128,10 @@ namespace AeLa.Utilities.SceneDeps
 					}
 
 					await UniTask.WhenAll(loadScenesTasks);
+
+					// wait for blocking operations after loading to allow final group to block end of load
+					await WaitForBlockingOperations(ct);
+					ct.ThrowIfCancellationRequested();
 
 					refs.List.AddRange(scenes);
 				}
@@ -207,6 +222,23 @@ namespace AeLa.Utilities.SceneDeps
 		public static UniTask ReleaseAsync(Handle handle)
 		{
 			return handle.ReleaseAsync();
+		}
+
+		/// <summary>
+		/// Blocks activation of the next dependency group until the returned handle is disposed.
+		/// </summary>
+		public static BlockingOperation Block()
+		{
+			blockingOperations++;
+			return new();
+		}
+
+		private static async UniTask WaitForBlockingOperations(CancellationToken ct)
+		{
+			while (blockingOperations > 0)
+			{
+				await UniTask.Yield(cancellationToken: ct);
+			}
 		}
 
 		private static UniTask ReleaseInternalAsync(Handle handle)
